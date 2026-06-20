@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pomodoro</title>
+<link rel="icon" id="favicon" href="data:,">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --accent: #e63946;
+  }
+
+  *{ margin:0; padding:0; box-sizing:border-box; }
+
+  html, body{
+    height:100%;
+    width:100%;
+    overflow:hidden;
+    background:#fff;
+    font-family:'Space Grotesk', 'Helvetica Neue', Arial, sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  #app{
+    position:fixed;
+    inset:0;
+    cursor:pointer;
+  }
+
+  /* backgrounds */
+  #bgWhite{
+    position:fixed;
+    inset:0;
+    background:#fff;
+  }
+
+  #bgColor{
+    position:fixed;
+    left:0;
+    right:0;
+    bottom:0;
+    top:0%;
+    background:var(--accent);
+    transition: top 1s linear, background-color .6s ease;
+  }
+
+  /* duplicated text content, one white, one accent-colored, clipped against each other */
+  .content{
+    position:fixed;
+    inset:0;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:2.2vh;
+    pointer-events:none;
+    transition: clip-path 1s linear;
+    text-align:center;
+  }
+
+  .content-white{ color:#fff; clip-path: inset(0% 0 0 0); }
+  .content-color{ color:var(--accent); clip-path: inset(0 0 100% 0); transition: clip-path 1s linear, color .6s ease; }
+
+  .label{
+    font-size:clamp(.75rem, 1.6vw, 1rem);
+    font-weight:500;
+    letter-spacing:.45em;
+    text-transform:uppercase;
+    opacity:.85;
+    pointer-events:auto;
+    cursor:pointer;
+  }
+
+  .timer{
+    font-size:clamp(3.5rem, 20vw, 13rem);
+    font-weight:700;
+    font-variant-numeric:tabular-nums;
+    letter-spacing:.01em;
+    line-height:1;
+  }
+
+  .hint{
+    font-size:clamp(.7rem, 1.3vw, .85rem);
+    font-weight:400;
+    letter-spacing:.2em;
+    text-transform:uppercase;
+    opacity:.6;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    #bgColor, .content{ transition:none; }
+  }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div id="bgWhite"></div>
+  <div id="bgColor"></div>
+
+  <div class="content content-white">
+    <div class="label">Focus</div>
+    <div class="timer">25:00</div>
+    <div class="hint">tap to start</div>
+  </div>
+
+  <div class="content content-color">
+    <div class="label">Focus</div>
+    <div class="timer">25:00</div>
+    <div class="hint">tap to start</div>
+  </div>
+</div>
+
+<script>
+(function(){
+
+  const DURATIONS = { focus: 25 * 60, break: 5 * 60 };
+  const COLORS = { focus: '#e63946', break: '#2e7d32' };
+
+  let mode = 'focus';
+  let remaining = DURATIONS.focus;
+  let running = false;
+  let intervalId = null;
+
+  const app = document.getElementById('app');
+  const bgColor = document.getElementById('bgColor');
+  const contentWhite = document.querySelector('.content-white');
+  const contentColor = document.querySelector('.content-color');
+  const timers = document.querySelectorAll('.timer');
+  const labels = document.querySelectorAll('.label');
+  const hints = document.querySelectorAll('.hint');
+  const favicon = document.getElementById('favicon');
+  const root = document.documentElement;
+
+  function fmt(s){
+    const m = Math.floor(s / 60).toString().padStart(2, '0');
+    const ss = Math.floor(s % 60).toString().padStart(2, '0');
+    return m + ':' + ss;
+  }
+
+  function setAll(nodelist, text){
+    nodelist.forEach(n => n.textContent = text);
+  }
+
+  function applyAccent(){
+    root.style.setProperty('--accent', COLORS[mode]);
+  }
+
+  function render(){
+    setAll(timers, fmt(remaining));
+    setAll(labels, mode === 'focus' ? 'Focus' : 'Break');
+
+    let hint;
+    if (running) hint = 'tap to pause';
+    else if (remaining === DURATIONS[mode]) hint = 'tap to start';
+    else hint = 'tap to resume';
+    setAll(hints, hint);
+
+    const total = DURATIONS[mode];
+    const elapsedFrac = Math.min(1, Math.max(0, 1 - remaining / total));
+    const colorTop = elapsedFrac * 100;
+
+    bgColor.style.top = colorTop + '%';
+    contentWhite.style.clipPath = `inset(${colorTop}% 0 0 0)`;
+    contentColor.style.clipPath = `inset(0 0 ${100 - colorTop}% 0)`;
+
+    drawFavicon(remaining / total, COLORS[mode]);
+  }
+
+  function drawFavicon(remainingFrac, color){
+    const size = 64;
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d');
+    const cx = size / 2, cy = size / 2, r = size / 2 - 2;
+
+    if (remainingFrac > 0.002){
+      const elapsedFrac = 1 - remainingFrac;
+      const start = -Math.PI / 2 + elapsedFrac * 2 * Math.PI;
+      const end = -Math.PI / 2 + 2 * Math.PI;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.arc(cx, cy, r, start, end, false);
+      ctx.closePath();
+      ctx.fillStyle = color;
+      ctx.fill();
+    }
+
+    favicon.href = canvas.toDataURL('image/png');
+  }
+
+  function tick(){
+    remaining -= 1;
+    if (remaining < 0){
+      mode = mode === 'focus' ? 'break' : 'focus';
+      remaining = DURATIONS[mode];
+      applyAccent();
+    }
+    render();
+  }
+
+  function start(){
+    if (running) return;
+    running = true;
+    intervalId = setInterval(tick, 1000);
+    render();
+  }
+
+  function pause(){
+    running = false;
+    clearInterval(intervalId);
+    render();
+  }
+
+  function toggle(){
+    running ? pause() : start();
+  }
+
+  function resetSession(){
+    pause();
+    remaining = DURATIONS[mode];
+    render();
+  }
+
+  function editDurations(){
+    const f = parseFloat(window.prompt('Focus length, minutes:', DURATIONS.focus / 60));
+    if (!isNaN(f) && f > 0) DURATIONS.focus = Math.round(f * 60);
+    const b = parseFloat(window.prompt('Break length, minutes:', DURATIONS.break / 60));
+    if (!isNaN(b) && b > 0) DURATIONS.break = Math.round(b * 60);
+    remaining = DURATIONS[mode];
+    render();
+  }
+
+  app.addEventListener('click', (e) => {
+    if (e.target.classList.contains('label') && !running){
+      editDurations();
+    } else {
+      toggle();
+    }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.code === 'Space'){ e.preventDefault(); toggle(); }
+    if (e.key === 'r' || e.key === 'R'){ resetSession(); }
+  });
+
+  applyAccent();
+  render();
+})();
+</script>
+
+</body>
+</html>
