@@ -137,14 +137,6 @@
   const favicon = document.getElementById('favicon');
   const root = document.documentElement;
 
-  let faviconFontReady = false;
-  const faviconFont = new FontFace('Minimal4', "url('./Minimal4.ttf')");
-  faviconFont.load().then((loaded) => {
-    document.fonts.add(loaded);
-    faviconFontReady = true;
-    render(); // redraw with the real font in case earlier frames used the fallback
-  }).catch(() => { /* font failed to load -- canvas falls back to sans-serif */ });
-
   function fmt(s){
     const m = Math.floor(s / 60).toString().padStart(2, '0');
     const ss = Math.floor(s % 60).toString().padStart(2, '0');
@@ -212,17 +204,15 @@
 
     const minutesLeft = Math.max(1, Math.ceil(remainingSeconds / 60));
     const txt = String(minutesLeft);
-    const fontFamily = faviconFontReady ? 'Minimal4' : 'sans-serif';
+    const fontFamily = 'Arial, Helvetica, sans-serif';
+    const fontWeight = 'bold';
 
-    // Measure at a reference size, then scale linearly to fill the hole.
-    // This font's glyphs sit in a small fraction of its nominal em box, so a
-    // fixed font-size multiplier badly undersized the digits -- measuring
-    // actual ink extents and scaling to fit is what gets this right for any
-    // digit count or font.
+    // Measure at a reference size, then scale linearly to fill the hole, so
+    // this works for any digit count without hand-tuned per-length constants.
     const margin = 0.85; // fraction of the hole's diameter usable before touching the ring
     const maxDim = rInner * 2 * margin;
     const probeSize = 100;
-    ctx.font = `${probeSize}px ${fontFamily}`;
+    ctx.font = `${fontWeight} ${probeSize}px ${fontFamily}`;
     ctx.textAlign = 'center';
     const probe = ctx.measureText(txt);
     const probeW = probe.width;
@@ -230,7 +220,7 @@
     const scale = Math.min(maxDim / probeW, maxDim / probeH);
     const fontSize = Math.max(8, Math.floor(probeSize * scale));
 
-    ctx.font = `${fontSize}px ${fontFamily}`;
+    ctx.font = `${fontWeight} ${fontSize}px ${fontFamily}`;
     const finalMetrics = ctx.measureText(txt);
     const ascent = finalMetrics.actualBoundingBoxAscent || fontSize * 0.7;
     const descent = finalMetrics.actualBoundingBoxDescent || 0;
