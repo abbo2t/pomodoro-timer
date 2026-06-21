@@ -137,6 +137,14 @@
   const favicon = document.getElementById('favicon');
   const root = document.documentElement;
 
+  let faviconFontReady = false;
+  const faviconFont = new FontFace('Minimal4', "url('./Minimal4.ttf')");
+  faviconFont.load().then((loaded) => {
+    document.fonts.add(loaded);
+    faviconFontReady = true;
+    render(); // redraw with the real font in case earlier frames used the fallback
+  }).catch(() => { /* font failed to load -- canvas falls back to sans-serif */ });
+
   function fmt(s){
     const m = Math.floor(s / 60).toString().padStart(2, '0');
     const ss = Math.floor(s % 60).toString().padStart(2, '0');
@@ -169,16 +177,19 @@
     contentWhite.style.clipPath = `inset(${colorTop}% 0 0 0)`;
     contentColor.style.clipPath = `inset(0 0 ${100 - colorTop}% 0)`;
 
-    drawFavicon(remaining / total, COLORS[mode]);
+    drawFavicon(remaining, total, COLORS[mode]);
   }
 
-  function drawFavicon(remainingFrac, color){
-    const size = 64;
+  function drawFavicon(remainingSeconds, totalSeconds, color){
+    const size = 96;
     const canvas = document.createElement('canvas');
     canvas.width = size;
     canvas.height = size;
     const ctx = canvas.getContext('2d');
-    const cx = size / 2, cy = size / 2, r = size / 2 - 2;
+    const cx = size / 2, cy = size / 2;
+    const rOuter = size / 2 - size * 0.04;
+    const rInner = rOuter * 0.62;
+    const remainingFrac = totalSeconds > 0 ? remainingSeconds / totalSeconds : 0;
 
     if (remainingFrac > 0.002){
       const elapsedFrac = 1 - remainingFrac;
@@ -186,11 +197,26 @@
       const end = -Math.PI / 2 + 2 * Math.PI;
       ctx.beginPath();
       ctx.moveTo(cx, cy);
-      ctx.arc(cx, cy, r, start, end, false);
+      ctx.arc(cx, cy, rOuter, start, end, false);
       ctx.closePath();
       ctx.fillStyle = color;
       ctx.fill();
     }
+
+    // punch a clean, constant-background hole so the number never fights the pie's own contrast
+    ctx.beginPath();
+    ctx.arc(cx, cy, rInner, 0, Math.PI * 2);
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
+
+    const minutesLeft = Math.max(1, Math.ceil(remainingSeconds / 60));
+    const txt = String(minutesLeft);
+    const fontSize = Math.round(rInner * (txt.length === 1 ? 1.55 : 1.05));
+    ctx.font = `${fontSize}px ${faviconFontReady ? 'Minimal4' : 'sans-serif'}`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = color;
+    ctx.fillText(txt, cx, cy + fontSize * 0.04);
 
     favicon.href = canvas.toDataURL('image/png');
   }
