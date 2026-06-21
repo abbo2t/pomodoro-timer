@@ -124,6 +124,8 @@
   let remaining = DURATIONS.focus;
   let running = false;
   let intervalId = null;
+  let endTimestamp = null;
+  const STORAGE_KEY = 'pomodoro-timer-state';
 
   const app = document.getElementById('app');
   const bgColor = document.getElementById('bgColor');
@@ -193,27 +195,75 @@
     favicon.href = canvas.toDataURL('image/png');
   }
 
+  function saveState(){
+    try{
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        mode,
+        durations: DURATIONS,
+        running,
+        remaining,
+        endTime: running ? endTimestamp : null
+      }));
+    } catch(e){ /* storage unavailable (e.g. sandboxed preview) -- fail silently */ }
+  }
+
+  function loadState(){
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return;
+      const state = JSON.parse(raw);
+
+      if (state.durations){
+        if (state.durations.focus) DURATIONS.focus = state.durations.focus;
+        if (state.durations.break) DURATIONS.break = state.durations.break;
+      }
+      mode = state.mode === 'break' ? 'break' : 'focus';
+
+      if (state.running && typeof state.endTime === 'number'){
+        let remMs = state.endTime - Date.now();
+        let guard = 0;
+        // catch up through any sessions that fully elapsed while the page was closed
+        while (remMs <= 0 && guard < 200){
+          mode = mode === 'focus' ? 'break' : 'focus';
+          remMs += DURATIONS[mode] * 1000;
+          guard++;
+        }
+        remaining = Math.max(0, Math.round(remMs / 1000));
+        endTimestamp = Date.now() + remaining * 1000;
+        running = true;
+      } else if (typeof state.remaining === 'number'){
+        remaining = Math.min(state.remaining, DURATIONS[mode]);
+        running = false;
+      }
+    } catch(e){ /* corrupt or unavailable state -- start fresh */ }
+  }
+
   function tick(){
-    remaining -= 1;
-    if (remaining < 0){
+    remaining = Math.max(0, Math.round((endTimestamp - Date.now()) / 1000));
+    if (remaining <= 0){
       mode = mode === 'focus' ? 'break' : 'focus';
       remaining = DURATIONS[mode];
+      endTimestamp = Date.now() + remaining * 1000;
       applyAccent();
     }
     render();
+    saveState();
   }
 
   function start(){
     if (running) return;
     running = true;
+    endTimestamp = Date.now() + remaining * 1000;
     intervalId = setInterval(tick, 1000);
     render();
+    saveState();
   }
 
   function pause(){
     running = false;
     clearInterval(intervalId);
     render();
+    saveState();
   }
 
   function toggle(){
@@ -224,6 +274,7 @@
     pause();
     remaining = DURATIONS[mode];
     render();
+    saveState();
   }
 
   function editDurations(){
@@ -233,6 +284,7 @@
     if (!isNaN(b) && b > 0) DURATIONS.break = Math.round(b * 60);
     remaining = DURATIONS[mode];
     render();
+    saveState();
   }
 
   app.addEventListener('click', (e) => {
@@ -248,8 +300,12 @@
     if (e.key === 'r' || e.key === 'R'){ resetSession(); }
   });
 
+  loadState();
   applyAccent();
   render();
+  if (running){
+    intervalId = setInterval(tick, 1000);
+  }
 })();
 </script>
 
