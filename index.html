@@ -236,7 +236,7 @@
     const descent = finalMetrics.actualBoundingBoxDescent || 0;
     ctx.textBaseline = 'alphabetic';
     ctx.fillStyle = color;
-    ctx.fillText(txt, cx, cy + (ascent - descent) / 2);
+    ctx.fillText(txt, cx + onePixelAtFaviconScale, cy + (ascent - descent) / 2);
 
     favicon.href = canvas.toDataURL('image/png');
   }
