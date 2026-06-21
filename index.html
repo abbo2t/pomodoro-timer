@@ -209,14 +209,16 @@
     const fontFamily = 'Arial, Helvetica, sans-serif';
     const fontWeight = 'bold';
 
-    // Measure at a reference size, then scale linearly to fill the hole, so
-    // this works for any digit count without hand-tuned per-length constants.
+    // Measure against a fixed two-digit reference (the worst case for width)
+    // rather than the actual text, so the font-size stays constant whether
+    // we're showing one digit or two -- only what's drawn changes, not the size.
+    const sizingReference = '88';
     const margin = 0.85; // fraction of the hole's diameter usable before touching the ring
     const maxDim = rInner * 2 * margin;
     const probeSize = 100;
     ctx.font = `${fontWeight} ${probeSize}px ${fontFamily}`;
     ctx.textAlign = 'center';
-    const probe = ctx.measureText(txt);
+    const probe = ctx.measureText(sizingReference);
     const probeW = probe.width;
     const probeH = (probe.actualBoundingBoxAscent || probeSize * 0.7) + (probe.actualBoundingBoxDescent || 0);
     const scale = Math.min(maxDim / probeW, maxDim / probeH);
