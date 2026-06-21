@@ -188,7 +188,8 @@
     const ctx = canvas.getContext('2d');
     const cx = size / 2, cy = size / 2;
     const rOuter = size / 2 - size * 0.04;
-    const rInner = rOuter * 0.62;
+    const onePixelAtFaviconScale = size / 16; // favicons render around 16px in a browser tab
+    const rInner = rOuter * 0.62 + onePixelAtFaviconScale;
     const remainingFrac = totalSeconds > 0 ? remainingSeconds / totalSeconds : 0;
 
     if (remainingFrac > 0.002){
