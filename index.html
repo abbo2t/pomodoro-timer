@@ -161,6 +161,8 @@
     else hint = 'tap to resume';
     setAll(hints, hint);
 
+    document.title = `${fmt(remaining)} · ${mode === 'focus' ? 'Focus' : 'Break'}`;
+
     const total = DURATIONS[mode];
     const elapsedFrac = Math.min(1, Math.max(0, 1 - remaining / total));
     const colorTop = elapsedFrac * 100;
@@ -226,7 +228,7 @@
     const descent = finalMetrics.actualBoundingBoxDescent || 0;
     ctx.textBaseline = 'alphabetic';
     ctx.fillStyle = color;
-    ctx.fillText(txt, cx + onePixelAtFaviconScale, cy + (ascent - descent) / 2);
+    ctx.fillText(txt, cx, cy + (ascent - descent) / 2);
 
     favicon.href = canvas.toDataURL('image/png');
   }
