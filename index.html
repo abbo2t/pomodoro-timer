@@ -222,19 +222,23 @@
       : m.width;
 
     // White pill behind the number so it's always black-on-white regardless
-    // of where the colored band is sitting.
+    // of where the colored band is sitting. Anchored to the actual baseline
+    // position used in fillText below, not to raw cy.
+    const yBaseline = cy + (ascent - descent) / 2;
     const pad = size * 0.06;
     ctx.fillStyle = '#ffffff';
     ctx.beginPath();
-    const rx = cx - textW / 2 - pad, ry = cy - ascent - pad;
-    const rw = textW + pad * 2,      rh = textH + pad * 2;
+    const rx = cx - m.width / 2 - pad;
+    const ry = yBaseline - ascent - pad;
+    const rw = m.width + pad * 2;
+    const rh = ascent + descent + pad * 2;
     const radius = size * 0.08;
     ctx.roundRect(rx, ry, rw, rh, radius);
     ctx.fill();
 
     ctx.fillStyle = '#000000';
     ctx.textBaseline = 'alphabetic';
-    ctx.fillText(txt, cx, cy + (ascent - descent) / 2);
+    ctx.fillText(txt, cx, yBaseline);
 
     favicon.href = canvas.toDataURL('image/png');
   }
