@@ -180,48 +180,57 @@
     canvas.width = size;
     canvas.height = size;
     const ctx = canvas.getContext('2d');
+    const cx = size / 2, cy = size / 2;
+    const rOuter = size / 2 - size * 0.04;
+    const onePixelAtFaviconScale = size / 16; // favicons render around 16px in a browser tab
+    const rInner = rOuter * 0.62 + onePixelAtFaviconScale;
     const remainingFrac = totalSeconds > 0 ? remainingSeconds / totalSeconds : 0;
 
-    // White base
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, size, size);
-
-    // Colored band rises from the bottom, shrinking upward as time elapses.
-    const colorHeight = Math.round(remainingFrac * size);
-    if (colorHeight > 0){
+    if (remainingFrac > 0.002){
+      const elapsedFrac = 1 - remainingFrac;
+      const start = -Math.PI / 2 + elapsedFrac * 2 * Math.PI;
+      const end = -Math.PI / 2 + 2 * Math.PI;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.arc(cx, cy, rOuter, start, end, false);
+      ctx.closePath();
       ctx.fillStyle = color;
-      ctx.fillRect(0, size - colorHeight, size, colorHeight);
+      ctx.fill();
     }
 
-    // Gmail-style badge: white circle in the bottom-right with a bold numeral.
+    // punch a clean, constant-background hole so the number never fights the pie's own contrast
+    ctx.beginPath();
+    ctx.arc(cx, cy, rInner, 0, Math.PI * 2);
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
+
     const minutesLeft = Math.max(1, Math.ceil(remainingSeconds / 60));
     const txt = String(minutesLeft);
     const fontFamily = 'Arial, Helvetica, sans-serif';
+    const fontWeight = 'bold';
 
-    const badgeR = size * 0.30;
-    const bx = size - badgeR - size * 0.03;
-    const by = size - badgeR - size * 0.03;
-
-    ctx.fillStyle = '#ffffff';
-    ctx.beginPath();
-    ctx.arc(bx, by, badgeR, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Size the numeral to fill ~75% of the badge diameter, locked to '88'
-    // so the size doesn't jump as digits change.
+    // Measure against a fixed two-digit reference (the worst case for width)
+    // rather than the actual text, so the font-size stays constant whether
+    // we're showing one digit or two -- only what's drawn changes, not the size.
+    const sizingReference = '88';
+    const margin = 0.85; // fraction of the hole's diameter usable before touching the ring
+    const maxDim = rInner * 2 * margin;
     const probeSize = 100;
-    const target = badgeR * 2 * 0.90;
-    ctx.font = `bold ${probeSize}px ${fontFamily}`;
-    const probe = ctx.measureText('88');
+    ctx.font = `${fontWeight} ${probeSize}px ${fontFamily}`;
+    ctx.textAlign = 'center';
+    const probe = ctx.measureText(sizingReference);
+    const probeW = probe.width;
     const probeH = (probe.actualBoundingBoxAscent || probeSize * 0.7) + (probe.actualBoundingBoxDescent || 0);
-    const scale = Math.min(target / probe.width, target / probeH);
+    const scale = Math.min(maxDim / probeW, maxDim / probeH);
     const fontSize = Math.max(8, Math.floor(probeSize * scale));
 
-    ctx.font = `bold ${fontSize}px ${fontFamily}`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillStyle = '#111111';
-    ctx.fillText(txt, bx, by);
+    ctx.font = `${fontWeight} ${fontSize}px ${fontFamily}`;
+    const finalMetrics = ctx.measureText(txt);
+    const ascent = finalMetrics.actualBoundingBoxAscent || fontSize * 0.7;
+    const descent = finalMetrics.actualBoundingBoxDescent || 0;
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillStyle = color;
+    ctx.fillText(txt, cx, cy + (ascent - descent) / 2);
 
     favicon.href = canvas.toDataURL('image/png');
   }
