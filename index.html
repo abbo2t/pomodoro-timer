@@ -180,65 +180,48 @@
     canvas.width = size;
     canvas.height = size;
     const ctx = canvas.getContext('2d');
-    const cx = size / 2, cy = size / 2;
     const remainingFrac = totalSeconds > 0 ? remainingSeconds / totalSeconds : 0;
 
     // White base
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, size, size);
 
-    // Colored band from the bottom, shrinking upward as time elapses --
-    // mirrors the sinking-background effect on the main page.
+    // Colored band rises from the bottom, shrinking upward as time elapses.
     const colorHeight = Math.round(remainingFrac * size);
     if (colorHeight > 0){
       ctx.fillStyle = color;
       ctx.fillRect(0, size - colorHeight, size, colorHeight);
     }
 
-    // Number: sized against the widest two-digit case so it never changes
-    // size as the minute count ticks down.
+    // Gmail-style badge: white circle in the bottom-right with a bold numeral.
     const minutesLeft = Math.max(1, Math.ceil(remainingSeconds / 60));
     const txt = String(minutesLeft);
     const fontFamily = 'Arial, Helvetica, sans-serif';
-    const fontWeight = 'bold';
-    const margin = 0.80;
-    const maxDim = size * margin;
-    const probeSize = 100;
-    ctx.font = `${fontWeight} ${probeSize}px ${fontFamily}`;
-    ctx.textAlign = 'right';
-    const probe = ctx.measureText('88');
-    const probeW = probe.width;
-    const probeH = (probe.actualBoundingBoxAscent || probeSize * 0.7) + (probe.actualBoundingBoxDescent || 0);
-    const scale = Math.min(maxDim / probeW, maxDim / probeH);
-    const fontSize = Math.max(8, Math.floor(probeSize * scale));
 
-    ctx.font = `${fontWeight} ${fontSize}px ${fontFamily}`;
-    const m = ctx.measureText(txt);
-    const ascent  = m.actualBoundingBoxAscent  || fontSize * 0.7;
-    const descent = m.actualBoundingBoxDescent || 0;
-    const textH = ascent + descent;
-    const textW = m.actualBoundingBoxLeft !== undefined
-      ? m.actualBoundingBoxLeft + m.actualBoundingBoxRight
-      : m.width;
+    const badgeR = size * 0.30;
+    const bx = size - badgeR - size * 0.03;
+    const by = size - badgeR - size * 0.03;
 
-    // White pill behind the number, anchored to the bottom-right corner.
-    const edgePad = size * 0.06;
-    const xRight = size - edgePad;
-    const yBaseline = size - edgePad - descent;
-    const pad = size * 0.06;
     ctx.fillStyle = '#ffffff';
     ctx.beginPath();
-    const rx = xRight - m.width - pad;
-    const ry = yBaseline - ascent - pad;
-    const rw = m.width + pad * 2;
-    const rh = ascent + descent + pad * 2;
-    const radius = size * 0.08;
-    ctx.roundRect(rx, ry, rw, rh, radius);
+    ctx.arc(bx, by, badgeR, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.fillStyle = '#000000';
-    ctx.textBaseline = 'alphabetic';
-    ctx.fillText(txt, xRight, yBaseline);
+    // Size the numeral to fill ~75% of the badge diameter, locked to '88'
+    // so the size doesn't jump as digits change.
+    const probeSize = 100;
+    const target = badgeR * 2 * 0.90;
+    ctx.font = `bold ${probeSize}px ${fontFamily}`;
+    const probe = ctx.measureText('88');
+    const probeH = (probe.actualBoundingBoxAscent || probeSize * 0.7) + (probe.actualBoundingBoxDescent || 0);
+    const scale = Math.min(target / probe.width, target / probeH);
+    const fontSize = Math.max(8, Math.floor(probeSize * scale));
+
+    ctx.font = `bold ${fontSize}px ${fontFamily}`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#111111';
+    ctx.fillText(txt, bx, by);
 
     favicon.href = canvas.toDataURL('image/png');
   }
