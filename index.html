@@ -205,7 +205,7 @@
     const maxDim = size * margin;
     const probeSize = 100;
     ctx.font = `${fontWeight} ${probeSize}px ${fontFamily}`;
-    ctx.textAlign = 'center';
+    ctx.textAlign = 'right';
     const probe = ctx.measureText('88');
     const probeW = probe.width;
     const probeH = (probe.actualBoundingBoxAscent || probeSize * 0.7) + (probe.actualBoundingBoxDescent || 0);
@@ -221,14 +221,14 @@
       ? m.actualBoundingBoxLeft + m.actualBoundingBoxRight
       : m.width;
 
-    // White pill behind the number so it's always black-on-white regardless
-    // of where the colored band is sitting. Anchored to the actual baseline
-    // position used in fillText below, not to raw cy.
-    const yBaseline = cy + (ascent - descent) / 2;
+    // White pill behind the number, anchored to the bottom-right corner.
+    const edgePad = size * 0.06;
+    const xRight = size - edgePad;
+    const yBaseline = size - edgePad - descent;
     const pad = size * 0.06;
     ctx.fillStyle = '#ffffff';
     ctx.beginPath();
-    const rx = cx - m.width / 2 - pad;
+    const rx = xRight - m.width - pad;
     const ry = yBaseline - ascent - pad;
     const rw = m.width + pad * 2;
     const rh = ascent + descent + pad * 2;
@@ -238,7 +238,7 @@
 
     ctx.fillStyle = '#000000';
     ctx.textBaseline = 'alphabetic';
-    ctx.fillText(txt, cx, yBaseline);
+    ctx.fillText(txt, xRight, yBaseline);
 
     favicon.href = canvas.toDataURL('image/png');
   }
